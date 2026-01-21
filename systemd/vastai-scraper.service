@@ -1,0 +1,18 @@
+[Unit]
+Description=Vast.ai GPU Price Scraper
+After=network.target
+
+[Service]
+Type=simple
+User=user
+WorkingDirectory=/home/user/vastai-scraper
+ExecStart=/usr/bin/node index.mjs
+Restart=on-failure
+RestartSec=10
+
+Environment="DATA_DIR=/home/user/vastai-scraper/data"
+Environment="SCHEDULE=*/5 * * * *"
+Environment="HEALTHCHECK_URL=https://hc-ping.com/ea03235c-f790-4f48-aef7-4b3604ccdea2"
+
+[Install]
+WantedBy=multi-user.target
