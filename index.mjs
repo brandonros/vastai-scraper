@@ -22,7 +22,7 @@ const CONFIG = {
     'accept-language': 'en-US,en;q=0.9',
     'cache-control': 'no-cache',
     'pragma': 'no-cache',
-    'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36',
+    'user-agent': process.env.USER_AGENT || 'vastai-scraper/1.0',
   },
   query: {
     gpu_name: { in: ['RTX 5090'] },

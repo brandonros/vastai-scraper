@@ -7,8 +7,10 @@ Type=simple
 User=user
 WorkingDirectory=/home/user/vastai-scraper
 ExecStart=/usr/bin/node index.mjs
-Restart=on-failure
+Restart=always
 RestartSec=10
+StandardOutput=journal
+StandardError=journal
 
 Environment="DATA_DIR=/home/user/vastai-scraper/data"
 Environment="SCHEDULE=*/5 * * * *"

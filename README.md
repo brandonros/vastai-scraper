@@ -21,6 +21,7 @@ node index.mjs
 | `DATA_DIR` | `./data` | Output directory for CSV files |
 | `SCHEDULE` | `*/5 * * * *` | Cron schedule |
 | `HEALTHCHECK_URL` | — | Optional healthchecks.io ping URL |
+| `USER_AGENT` | `vastai-scraper/1.0` | HTTP User-Agent header |
 
 ## Output
 

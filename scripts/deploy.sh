@@ -2,7 +2,7 @@
 
 set -e
 
-HOST="user@beelink-linux.local"
+HOST="${1:-user@beelink-linux.local}"
 REMOTE_DIR="~/vastai-scraper"
 
 echo "Deploying to $HOST..."
@@ -22,7 +22,7 @@ ssh "$HOST" << 'EOF'
     set -e
     command -v node >/dev/null || { echo "node not found in PATH"; exit 1; }
     cd ~/vastai-scraper
-    npm install -g pnpm
+    command -v pnpm >/dev/null || npm install -g pnpm
     pnpm install --prod
     sudo systemctl link "$(pwd)/systemd/vastai-scraper.service" 2>/dev/null || true
     sudo systemctl daemon-reload
