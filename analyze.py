@@ -99,24 +99,30 @@ def plot_market_prices(asks, bids):
 
 
 def plot_spread(merged):
-    """Plot bid/ask spread over time."""
+    """Plot bid/ask spread over time with percentile bands."""
     fig, ax = plt.subplots(figsize=(12, 4))
 
-    by_time = merged.groupby('ts')['spread'].agg(['median', 'mean', 'std'])
+    percentiles = [10, 25, 50, 75, 90]
+    by_time = merged.groupby('ts')['spread'].quantile(
+        [p/100 for p in percentiles]
+    ).unstack()
+    by_time.columns = [f'p{p}' for p in percentiles]
 
-    ax.plot(by_time.index, by_time['median'], label='Median spread', marker='.', color='tab:blue')
-    ax.fill_between(
-        by_time.index,
-        by_time['median'] - by_time['std'],
-        by_time['median'] + by_time['std'],
-        alpha=0.2
-    )
+    # Percentile bands
+    ax.fill_between(by_time.index, by_time['p10'], by_time['p90'],
+                    alpha=0.1, color='tab:blue', label='P10-P90')
+    ax.fill_between(by_time.index, by_time['p25'], by_time['p75'],
+                    alpha=0.2, color='tab:blue', label='P25-P75')
 
-    ax.axhline(0, color='black', linestyle='--', alpha=0.3)
+    # Median line
+    ax.plot(by_time.index, by_time['p50'], color='tab:blue', linewidth=2,
+            marker='.', markersize=3, label='Median')
+
+    ax.axhline(0, color='black', linestyle='--', alpha=0.3, label='Break-even')
     ax.set_xlabel('Time')
     ax.set_ylabel('Spread ($/hr)')
     ax.set_title('RTX 5090 1-GPU: Bid/Ask Spread (ask - bid)')
-    ax.legend()
+    ax.legend(loc='upper right', fontsize=8)
     ax.grid(True, alpha=0.3)
     plt.tight_layout()
     return fig
@@ -159,6 +165,30 @@ def plot_per_gpu_by_config(asks_all, bids_all):
         ax.set_title(f'RTX 5090: {name} Price per GPU by Configuration')
         ax.grid(True, alpha=0.3, axis='y')
 
+    plt.tight_layout()
+    return fig
+
+
+def plot_per_gpu_over_time(asks_all, bids_all):
+    """Overlay per-GPU median prices over time for all configurations."""
+    fig, axes = plt.subplots(2, 1, figsize=(12, 8), sharex=True)
+
+    gpu_counts = sorted(asks_all['num_gpus'].unique())
+    colors = {1: 'tab:blue', 2: 'tab:orange', 4: 'tab:green', 8: 'tab:purple'}
+
+    for ax, df, name in [(axes[0], asks_all, 'Ask'), (axes[1], bids_all, 'Bid')]:
+        for n in gpu_counts:
+            subset = df[df['num_gpus'] == n]
+            median = subset.groupby('ts')['price_per_gpu'].median()
+            ax.plot(median.index, median.values, label=f'{n}-GPU',
+                    color=colors[n], linewidth=1.5, alpha=0.8)
+
+        ax.set_ylabel('Price per GPU ($/hr)')
+        ax.set_title(f'RTX 5090: {name} Price per GPU Over Time')
+        ax.legend(loc='upper right', fontsize=8)
+        ax.grid(True, alpha=0.3)
+
+    axes[1].set_xlabel('Time')
     plt.tight_layout()
     return fig
 
@@ -220,6 +250,7 @@ def main():
     plot_spread(merged)
     plot_supply(asks)
     plot_per_gpu_by_config(asks_all, bids_all)
+    plot_per_gpu_over_time(asks_all, bids_all)
 
     plt.show()
 
