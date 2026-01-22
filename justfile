@@ -4,7 +4,7 @@ default_host := "user@beelink-linux.local"
 
 # Run analysis
 analyze:
-    uv run analyze.py
+    cd analysis && uv run analyze.py
 
 # Deploy to remote host
 deploy host=default_host:
@@ -19,6 +19,7 @@ deploy host=default_host:
         --exclude='node_modules/' \
         --exclude='.DS_Store' \
         --exclude='data/' \
+        --exclude='analysis/' \        
         . \
         "{{host}}:~/vastai-scraper/"
     ssh "{{host}}" << 'EOF'

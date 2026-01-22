@@ -9,7 +9,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from pathlib import Path
 
-DATA_DIR = Path('data')
+DATA_DIR = Path(__file__).parent.parent / 'data'
 
 
 VALID_GPU_COUNTS = [1, 2, 4, 8]
