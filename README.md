@@ -1,6 +1,6 @@
 # vastai-scraper
 
-Scrapes bid/ask prices from vast.ai and saves to CSV files.
+Scrapes bid/ask prices from vast.ai and saves to CSV files
 
 ## Setup
 
@@ -31,10 +31,13 @@ data/
   2026-01-21-bids.csv
 ```
 
-## Production Deployment
+## Commands
 
 ```bash
-./scripts/deploy.sh
+just deploy    # deploy to remote host
+just monitor   # tail logs on remote
+just pull      # pull CSV data from remote
+just analyze   # run analysis (in analysis/)
 ```
 
 ## Alerting
