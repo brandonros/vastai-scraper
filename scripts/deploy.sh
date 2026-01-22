@@ -11,9 +11,11 @@ echo "Deploying to $HOST..."
 rsync -avz \
     --delete \
     --exclude='.git/' \
+    --exclude='.venv/' \
+    --exclude='__pycache__/' \    
     --exclude='node_modules/' \
-    --exclude='data/' \
     --exclude='.DS_Store' \
+    --exclude='data/' \    
     . \
     "$HOST:$REMOTE_DIR/"
 

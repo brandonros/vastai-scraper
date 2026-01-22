@@ -1,0 +1,9 @@
+[project]
+name = "vastai-scraper"
+version = "0.1.0"
+description = "Vast.ai GPU pricing scraper and analysis"
+requires-python = ">=3.10"
+dependencies = [
+    "pandas",
+    "matplotlib",
+]
