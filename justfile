@@ -2,6 +2,11 @@ set shell := ["bash", "-uc"]
 
 default_host := "user@beelink-linux.local"
 
+# Run scraper locally
+run:
+    pnpm install
+    node index.mjs
+
 # Run analysis
 analyze:
     cd analysis && uv run analyze.py
