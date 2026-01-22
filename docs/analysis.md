@@ -17,7 +17,7 @@ Both files have identical schemas and are scraped simultaneously every 5 minutes
 | `machine_id` | Physical machine ID (can have multiple offers) |
 | `dph_total` | **Price per hour** (dollars) |
 | `min_bid` | Minimum acceptable bid |
-| `num_gpus` | Number of GPUs in this offer (1, 2, 4, 6, 8, 9) |
+| `num_gpus` | Number of GPUs in this offer (1, 2, 4, 8 used in analysis; rare 6/9 filtered out) |
 | `gpu_ram` | GPU memory (MB) - always 32607 for 5090 |
 | `cpu_cores` | CPU cores available |
 | `cpu_ram` | System RAM (MB) |
@@ -134,8 +134,8 @@ merged = asks.merge(bids, on=['ts_min', 'machine_id', 'num_gpus'], suffixes=('_a
 | 2 | 205 |
 | 4 | 105 |
 | 8 | 56 |
-| 6 | 1 |
-| 9 | 1 |
+
+*Note: Rare configs (6, 9 GPUs) filtered out of analysis.*
 
 ### Pricing (1-GPU offers)
 | Metric | Ask (seller wants) | Bid (buyer pays) |
@@ -150,7 +150,7 @@ merged = asks.merge(bids, on=['ts_min', 'machine_id', 'num_gpus'], suffixes=('_a
 
 ### Challenge: Heterogeneous Systems
 Each scrape returns 100+ offers with varying:
-- GPU count (1-9)
+- GPU count (1, 2, 4, 8)
 - CPU cores (32-384)
 - RAM (48-258 GB)
 - Network speed
@@ -181,10 +181,23 @@ mid = df[(df.dph_total >= 0.40) & (df.dph_total < 0.70)]
 expensive = df[df.dph_total >= 0.70]
 ```
 
+## Current Analysis (`analyze.py`)
+
+The script includes:
+- **1-GPU focused analysis** - filters to `num_gpus == 1` for apples-to-apples comparison
+- **Stable tracking** - uses `(machine_id, num_gpus)` instead of offer ID
+- **Bid/ask spread** - plots spread over time with std deviation bands
+- **Per-GPU normalized pricing** - computes `price_per_gpu = dph_total / num_gpus` for all configs
+- **Configuration comparison** - box plots and summary table comparing per-GPU cost across 1/2/4/8 GPU offers
+
+The per-GPU normalization reveals bulk pricing effects (discounts or premiums for multi-GPU bundles).
+
 ## Next Steps
 
-- [ ] Rewrite analyze.py to focus on 1-GPU offers
-- [ ] Track by (machine_id, num_gpus) instead of offer ID
-- [ ] Plot bid/ask spread over time for high-availability machines
+- [x] ~~Rewrite analyze.py to focus on 1-GPU offers~~
+- [x] ~~Track by (machine_id, num_gpus) instead of offer ID~~
+- [x] ~~Plot bid/ask spread over time~~
+- [x] ~~Per-GPU normalized pricing comparison~~
 - [ ] Identify price movers (machines with changing prices)
 - [ ] Market depth visualization (available supply at each price point)
+- [ ] High-availability machine filtering (present in 50%+ scrapes)

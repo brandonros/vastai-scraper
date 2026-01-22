@@ -12,8 +12,11 @@ from pathlib import Path
 DATA_DIR = Path('data')
 
 
-def load_matched_data():
-    """Load asks/bids and match by (timestamp, machine_id, num_gpus)."""
+VALID_GPU_COUNTS = [1, 2, 4, 8]
+
+
+def load_all_data():
+    """Load all asks/bids data with per-GPU normalized pricing."""
     asks = pd.concat([
         pd.read_csv(f, parse_dates=['timestamp'])
         for f in DATA_DIR.glob('*-asks.csv')
@@ -24,17 +27,32 @@ def load_matched_data():
         for f in DATA_DIR.glob('*-bids.csv')
     ], ignore_index=True)
 
-    # Floor to minute to align asks/bids (they're ~4ms apart)
+    # Filter to standard GPU configs only (drop rare 6, 9, etc.)
+    asks = asks[asks['num_gpus'].isin(VALID_GPU_COUNTS)]
+    bids = bids[bids['num_gpus'].isin(VALID_GPU_COUNTS)]
+
+    # Floor to minute to align asks/bids
     asks['ts'] = asks['timestamp'].dt.floor('min')
     bids['ts'] = bids['timestamp'].dt.floor('min')
 
-    # Filter to 1-GPU only
-    asks = asks[asks['num_gpus'] == 1]
-    bids = bids[bids['num_gpus'] == 1]
+    # Add per-GPU pricing
+    asks['price_per_gpu'] = asks['dph_total'] / asks['num_gpus']
+    bids['price_per_gpu'] = bids['dph_total'] / bids['num_gpus']
+
+    return asks, bids
+
+
+def load_matched_data():
+    """Load asks/bids and match by (timestamp, machine_id, num_gpus)."""
+    asks_all, bids_all = load_all_data()
+
+    # Filter to 1-GPU only for matched analysis
+    asks_1gpu = asks_all[asks_all['num_gpus'] == 1].copy()
+    bids_1gpu = bids_all[bids_all['num_gpus'] == 1].copy()
 
     # Match asks to bids by machine
-    merged = asks.merge(
-        bids,
+    merged = asks_1gpu.merge(
+        bids_1gpu,
         on=['ts', 'machine_id', 'num_gpus'],
         suffixes=('_ask', '_bid')
     )
@@ -42,7 +60,7 @@ def load_matched_data():
     # Calculate spread
     merged['spread'] = merged['dph_total_ask'] - merged['dph_total_bid']
 
-    return merged, asks, bids
+    return merged, asks_1gpu, bids_1gpu, asks_all, bids_all
 
 
 def plot_market_prices(asks, bids):
@@ -121,7 +139,31 @@ def plot_supply(asks):
     return fig
 
 
-def print_summary(merged, asks, bids):
+def plot_per_gpu_by_config(asks_all, bids_all):
+    """Box plot comparing per-GPU pricing across GPU configurations."""
+    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+
+    gpu_counts = sorted(asks_all['num_gpus'].unique())
+
+    for ax, df, name, color in [(axes[0], asks_all, 'Ask', 'tab:red'),
+                                 (axes[1], bids_all, 'Bid', 'tab:green')]:
+        data = [df[df['num_gpus'] == n]['price_per_gpu'].values for n in gpu_counts]
+        bp = ax.boxplot(data, labels=[str(n) for n in gpu_counts], patch_artist=True)
+
+        for patch in bp['boxes']:
+            patch.set_facecolor(color)
+            patch.set_alpha(0.6)
+
+        ax.set_xlabel('GPUs per Offer')
+        ax.set_ylabel('Price per GPU ($/hr)')
+        ax.set_title(f'RTX 5090: {name} Price per GPU by Configuration')
+        ax.grid(True, alpha=0.3, axis='y')
+
+    plt.tight_layout()
+    return fig
+
+
+def print_summary(merged, asks, bids, asks_all, bids_all):
     """Print summary statistics."""
     print("\n" + "=" * 60)
     print("RTX 5090 1-GPU MARKET SUMMARY")
@@ -145,16 +187,39 @@ def print_summary(merged, asks, bids):
     print(f"  Mean:   ${merged['spread'].mean():.3f}/hr")
 
     print("\n" + "=" * 60)
+    print("PER-GPU PRICING BY CONFIGURATION")
+    print("=" * 60)
+
+    gpu_counts = sorted(asks_all['num_gpus'].unique())
+    print(f"\n{'GPUs':>4}  {'Count':>6}  {'Ask $/GPU':>10}  {'Bid $/GPU':>10}  {'Ask Δ':>8}  {'Bid Δ':>8}")
+    print(f"{'':>4}  {'':>6}  {'(median)':>10}  {'(median)':>10}  {'vs 1':>8}  {'vs 1':>8}")
+    print("-" * 60)
+
+    ask_1gpu = asks_all[asks_all['num_gpus'] == 1]['price_per_gpu'].median()
+    bid_1gpu = bids_all[bids_all['num_gpus'] == 1]['price_per_gpu'].median()
+
+    for n in gpu_counts:
+        ask_n = asks_all[asks_all['num_gpus'] == n]
+        bid_n = bids_all[bids_all['num_gpus'] == n]
+        ask_med = ask_n['price_per_gpu'].median()
+        bid_med = bid_n['price_per_gpu'].median()
+        ask_discount = (ask_med - ask_1gpu) / ask_1gpu * 100
+        bid_discount = (bid_med - bid_1gpu) / bid_1gpu * 100
+        count = len(ask_n['id'].unique())
+        print(f"{n:>4}  {count:>6}  ${ask_med:>8.3f}  ${bid_med:>8.3f}  {ask_discount:>+7.1f}%  {bid_discount:>+7.1f}%")
+
+    print("\n" + "=" * 60)
 
 
 def main():
-    merged, asks, bids = load_matched_data()
+    merged, asks, bids, asks_all, bids_all = load_matched_data()
 
-    print_summary(merged, asks, bids)
+    print_summary(merged, asks, bids, asks_all, bids_all)
 
     plot_market_prices(asks, bids)
     plot_spread(merged)
     plot_supply(asks)
+    plot_per_gpu_by_config(asks_all, bids_all)
 
     plt.show()
 
