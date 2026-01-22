@@ -15,31 +15,27 @@ analyze:
 deploy host=default_host:
     #!/bin/bash
     set -e
+    REPO="git@github.com:brandonros/vastai-scraper.git"
     echo "Deploying to {{host}}..."
-    rsync -avz \
-        --delete \
-        --exclude='.git/' \
-        --exclude='.venv/' \
-        --exclude='__pycache__/' \
-        --exclude='node_modules/' \
-        --exclude='.DS_Store' \
-        --exclude='data/' \
-        --exclude='analysis/' \        
-        . \
-        "{{host}}:~/vastai-scraper/"
-    ssh "{{host}}" << 'EOF'
+    ssh "{{host}}" << EOF
         set -e
+        if [ -d ~/vastai-scraper/.git ]; then
+            echo "Pulling latest..."
+            cd ~/vastai-scraper && git pull
+        else
+            echo "Cloning repo..."
+            git clone "$REPO" ~/vastai-scraper
+        fi
         command -v node >/dev/null || { echo "node not found in PATH"; exit 1; }
         cd ~/vastai-scraper
         command -v pnpm >/dev/null || npm install -g pnpm
         pnpm install --prod
-        sudo systemctl link "$(pwd)/systemd/vastai-scraper.service" 2>/dev/null || true
+        sudo systemctl link "\$(pwd)/systemd/vastai-scraper.service" 2>/dev/null || true
         sudo systemctl daemon-reload
         sudo systemctl enable vastai-scraper
         sudo systemctl restart vastai-scraper
         sleep 5
         sudo systemctl status vastai-scraper --no-pager
-        sudo journalctl -u vastai-scraper -n 50 --no-pager --since "10 seconds ago"
     EOF
     echo "Deploy complete."
 
