@@ -179,7 +179,9 @@ async function scrapeAll() {
   const allSucceeded = results.every(Boolean);
 
   if (allSucceeded && process.env.HEALTHCHECK_URL) {
-    await healthcheckClient.get(process.env.HEALTHCHECK_URL).catch(() => {});
+    await healthcheckClient.get(process.env.HEALTHCHECK_URL).catch(e => {
+      logger.warn({ error: e.message }, 'Healthcheck ping failed');
+    });
   }
 }
 
