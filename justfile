@@ -15,22 +15,23 @@ analyze:
 deploy host=default_host:
     #!/bin/bash
     set -e
-    REPO="git@github.com:brandonros/vastai-scraper.git"
     echo "Deploying to {{host}}..."
-    ssh "{{host}}" << EOF
+    ssh "{{host}}" << 'EOF'
         set -e
-        if [ -d ~/vastai-scraper/.git ]; then
+        REPO="git@github.com:brandonros/vastai-scraper.git"
+        INSTALL_DIR="$HOME/vastai-scraper"
+        if [ -d "$INSTALL_DIR/.git" ]; then
             echo "Pulling latest..."
-            cd ~/vastai-scraper && git pull
+            cd "$INSTALL_DIR" && git pull
         else
             echo "Cloning repo..."
-            git clone "$REPO" ~/vastai-scraper
+            git clone "$REPO" "$INSTALL_DIR"
         fi
         command -v node >/dev/null || { echo "node not found in PATH"; exit 1; }
-        cd ~/vastai-scraper
+        cd "$INSTALL_DIR"
         command -v pnpm >/dev/null || npm install -g pnpm
         pnpm install --prod
-        sudo systemctl link "\$(pwd)/systemd/vastai-scraper.service" 2>/dev/null || true
+        sudo systemctl link "$INSTALL_DIR/systemd/vastai-scraper.service" 2>/dev/null || true
         sudo systemctl daemon-reload
         sudo systemctl enable vastai-scraper
         sudo systemctl restart vastai-scraper
