@@ -18,14 +18,16 @@ VALID_GPU_COUNTS = [1, 2, 4, 8]
 def load_all_data():
     """Load all asks/bids data with per-GPU normalized pricing."""
     asks = pd.concat([
-        pd.read_csv(f, parse_dates=['timestamp'])
+        pd.read_csv(f)
         for f in DATA_DIR.glob('*-asks.csv')
     ], ignore_index=True)
+    asks['timestamp'] = pd.to_datetime(asks['timestamp'], utc=True)
 
     bids = pd.concat([
-        pd.read_csv(f, parse_dates=['timestamp'])
+        pd.read_csv(f)
         for f in DATA_DIR.glob('*-bids.csv')
     ], ignore_index=True)
+    bids['timestamp'] = pd.to_datetime(bids['timestamp'], utc=True)
 
     # Filter to standard GPU configs only (drop rare 6, 9, etc.)
     asks = asks[asks['num_gpus'].isin(VALID_GPU_COUNTS)]
@@ -35,6 +37,10 @@ def load_all_data():
     asks['ts'] = asks['timestamp'].dt.floor('min')
     bids['ts'] = bids['timestamp'].dt.floor('min')
 
+    # Deduplicate in case scraper ran twice in same minute
+    asks = asks.drop_duplicates(subset=['ts', 'machine_id', 'num_gpus'])
+    bids = bids.drop_duplicates(subset=['ts', 'machine_id', 'num_gpus'])
+
     # Add per-GPU pricing
     asks['price_per_gpu'] = asks['dph_total'] / asks['num_gpus']
     bids['price_per_gpu'] = bids['dph_total'] / bids['num_gpus']
@@ -42,8 +48,16 @@ def load_all_data():
     return asks, bids
 
 
-def load_matched_data():
-    """Load asks/bids and match by (timestamp, machine_id, num_gpus)."""
+def load_data_for_analysis():
+    """Load all market data and prepare for analysis.
+
+    Returns:
+        merged_1gpu: 1-GPU asks/bids matched by (ts, machine_id) with spread
+        asks_1gpu: All 1-GPU ask offers
+        bids_1gpu: All 1-GPU bid offers
+        asks_all: All ask offers (1/2/4/8 GPU configs)
+        bids_all: All bid offers (1/2/4/8 GPU configs)
+    """
     asks_all, bids_all = load_all_data()
 
     # Filter to 1-GPU only for matched analysis
@@ -51,16 +65,16 @@ def load_matched_data():
     bids_1gpu = bids_all[bids_all['num_gpus'] == 1].copy()
 
     # Match asks to bids by machine
-    merged = asks_1gpu.merge(
+    merged_1gpu = asks_1gpu.merge(
         bids_1gpu,
         on=['ts', 'machine_id', 'num_gpus'],
         suffixes=('_ask', '_bid')
     )
 
     # Calculate spread
-    merged['spread'] = merged['dph_total_ask'] - merged['dph_total_bid']
+    merged_1gpu['spread'] = merged_1gpu['dph_total_ask'] - merged_1gpu['dph_total_bid']
 
-    return merged, asks_1gpu, bids_1gpu, asks_all, bids_all
+    return merged_1gpu, asks_1gpu, bids_1gpu, asks_all, bids_all
 
 
 def plot_market_prices(asks, bids):
@@ -242,7 +256,7 @@ def print_summary(merged, asks, bids, asks_all, bids_all):
 
 
 def main():
-    merged, asks, bids, asks_all, bids_all = load_matched_data()
+    merged, asks, bids, asks_all, bids_all = load_data_for_analysis()
 
     print_summary(merged, asks, bids, asks_all, bids_all)
 
