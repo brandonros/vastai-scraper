@@ -159,30 +159,6 @@ def plot_supply(asks):
     return fig
 
 
-def plot_per_gpu_by_config(asks_all, bids_all):
-    """Box plot comparing per-GPU pricing across GPU configurations."""
-    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
-
-    gpu_counts = sorted(asks_all['num_gpus'].unique())
-
-    for ax, df, name, color in [(axes[0], asks_all, 'Ask', 'tab:red'),
-                                 (axes[1], bids_all, 'Bid', 'tab:green')]:
-        data = [df[df['num_gpus'] == n]['price_per_gpu'].values for n in gpu_counts]
-        bp = ax.boxplot(data, labels=[str(n) for n in gpu_counts], patch_artist=True)
-
-        for patch in bp['boxes']:
-            patch.set_facecolor(color)
-            patch.set_alpha(0.6)
-
-        ax.set_xlabel('GPUs per Offer')
-        ax.set_ylabel('Price per GPU ($/hr)')
-        ax.set_title(f'RTX 5090: {name} Price per GPU by Configuration')
-        ax.grid(True, alpha=0.3, axis='y')
-
-    plt.tight_layout()
-    return fig
-
-
 def plot_per_gpu_over_time(asks_all, bids_all):
     """Overlay per-GPU median prices over time for all configurations."""
     fig, axes = plt.subplots(2, 1, figsize=(12, 8), sharex=True)
@@ -263,7 +239,6 @@ def main():
     plot_market_prices(asks, bids)
     plot_spread(merged)
     plot_supply(asks)
-    plot_per_gpu_by_config(asks_all, bids_all)
     plot_per_gpu_over_time(asks_all, bids_all)
 
     plt.show()
