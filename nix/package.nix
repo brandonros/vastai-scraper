@@ -1,11 +1,11 @@
-{ stdenv, nodejs, pnpm, pnpmConfigHook, fetchPnpmDeps, src }:
+{ stdenv, nodejs, pnpm, pnpmConfigHook, fetchPnpmDeps, makeBinaryWrapper, src }:
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "vastai-scraper";
   version = "1.0.0";
   inherit src;
 
-  nativeBuildInputs = [ nodejs pnpm pnpmConfigHook ];
+  nativeBuildInputs = [ nodejs pnpm pnpmConfigHook makeBinaryWrapper ];
 
   pnpmDeps = fetchPnpmDeps {
     inherit (finalAttrs) pname version src;
@@ -23,11 +23,8 @@ stdenv.mkDerivation (finalAttrs: {
     cp -r node_modules $out/lib/vastai-scraper/
 
     mkdir -p $out/bin
-    cat > $out/bin/vastai-scraper <<EOF
-    #!/bin/sh
-    exec ${nodejs}/bin/node $out/lib/vastai-scraper/index.mjs "\$@"
-    EOF
-    chmod +x $out/bin/vastai-scraper
+    makeBinaryWrapper ${nodejs}/bin/node $out/bin/vastai-scraper \
+      --add-flags $out/lib/vastai-scraper/index.mjs
 
     runHook postInstall
   '';
