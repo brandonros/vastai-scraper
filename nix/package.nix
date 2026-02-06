@@ -1,15 +1,16 @@
-{ stdenv, nodejs, pnpm, src }:
+{ stdenv, nodejs, pnpmConfigHook, fetchPnpmDeps, src }:
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "vastai-scraper";
   version = "1.0.0";
   inherit src;
 
-  nativeBuildInputs = [ nodejs pnpm.configHook ];
+  nativeBuildInputs = [ nodejs pnpmConfigHook ];
 
-  pnpmDeps = pnpm.fetchDeps {
+  pnpmDeps = fetchPnpmDeps {
     inherit (finalAttrs) pname version src;
     hash = ""; # build once, nix will tell you the correct hash
+    fetcherVersion = 4;
   };
 
   dontBuild = true;
