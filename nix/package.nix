@@ -1,11 +1,11 @@
-{ stdenv, nodejs, pnpmConfigHook, fetchPnpmDeps, src }:
+{ stdenv, nodejs, pnpm, pnpmConfigHook, fetchPnpmDeps, src }:
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "vastai-scraper";
   version = "1.0.0";
   inherit src;
 
-  nativeBuildInputs = [ nodejs pnpmConfigHook ];
+  nativeBuildInputs = [ nodejs pnpm pnpmConfigHook ];
 
   pnpmDeps = fetchPnpmDeps {
     inherit (finalAttrs) pname version src;
