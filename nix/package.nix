@@ -1,0 +1,33 @@
+{ stdenv, nodejs, pnpm, src }:
+
+stdenv.mkDerivation (finalAttrs: {
+  pname = "vastai-scraper";
+  version = "1.0.0";
+  inherit src;
+
+  nativeBuildInputs = [ nodejs pnpm.configHook ];
+
+  pnpmDeps = pnpm.fetchDeps {
+    inherit (finalAttrs) pname version src;
+    hash = ""; # build once, nix will tell you the correct hash
+  };
+
+  dontBuild = true;
+
+  installPhase = ''
+    runHook preInstall
+
+    mkdir -p $out/lib/vastai-scraper
+    cp index.mjs package.json $out/lib/vastai-scraper/
+    cp -r node_modules $out/lib/vastai-scraper/
+
+    mkdir -p $out/bin
+    cat > $out/bin/vastai-scraper <<EOF
+    #!/bin/sh
+    exec ${nodejs}/bin/node $out/lib/vastai-scraper/index.mjs "\$@"
+    EOF
+    chmod +x $out/bin/vastai-scraper
+
+    runHook postInstall
+  '';
+})
