@@ -9,7 +9,7 @@ stdenv.mkDerivation (finalAttrs: {
 
   pnpmDeps = fetchPnpmDeps {
     inherit (finalAttrs) pname version src;
-    hash = ""; # build once, nix will tell you the correct hash
+    hash = "sha256-yjlQSubyAU9HoMFt+q5pcMyJg30aWni98xO6/RdfogM=";
     fetcherVersion = 3;
   };
 
